@@ -2,6 +2,8 @@
 
 import evecentral
 import sys
+import locale
+import argparse
 
 REGION_IDS={
 	'Aridia': 10000054,
@@ -160,21 +162,21 @@ HISEC_REGION_IDS=[
 
 __all__ = ("HISEC_REGION_IDS", "REGION_IDS", "best_price")
 
-def collect_stats(item_name, regions=HISEC_REGION_IDS):
+def collect_stats(item_name, min_qty=1, regions=HISEC_REGION_IDS):
 	stats = {}
-	for region in HISEC_REGION_IDS:
-		stats[region] = evecentral.market_stats(item_name, region)
+	for region in regions:
+		stats[region] = evecentral.market_stats(item_name, region, minQ=min_qty)
 	return stats
 
-def check_bids(item_name, regions=HISEC_REGION_IDS):
+def check_bids(item_name, min_qty=1, regions=HISEC_REGION_IDS):
 	maxbuy = None
 	minbuy = None
 	minsell = None
 	maxsell = None
 	nobuy = []
 	nosell = []
-	stats = collect_stats(item_name, regions)
-	for region in HISEC_REGION_IDS:
+	stats = collect_stats(item_name, min_qty=min_qty, regions=regions)
+	for region in regions:
 		region_minsell = stats[region]['minsell']
 		region_maxbuy = stats[region]['maxbuy']
 		# Highest buy order for this item, anywhere
@@ -204,10 +206,16 @@ def check_bids(item_name, regions=HISEC_REGION_IDS):
 		}
 
 if __name__ == '__main__':
-	item_name = sys.argv[1]
+	locale.setlocale( locale.LC_ALL, '')
+	parser = argparse.ArgumentParser(description='Get market statistics for a specific item')
+	parser.add_argument('item_name', help='The item to collect statistics for')
+	parser.add_argument('--min_qty', default=1, help='The minimum quantity to consider')
+	args = parser.parse_args()
+	item_name = args.item_name
+	min_qty = args.min_qty
 	print "Item name: {0}.\n".format(item_name)
-	bids = check_bids(item_name)
-	print "  Highest buy order: {0} with {1}".format(IDS_REGIONS[bids['maxbuy']['region']], bids['maxbuy']['value'])
-	print "  Lowest buy order: {0} with {1}".format(IDS_REGIONS[bids['minbuy']['region']], bids['minbuy']['value'])
-	print "  Lowest sell order: {0} with {1}".format(IDS_REGIONS[bids['minsell']['region']], bids['minsell']['value'])
-	print "  Highest sell order: {0} with {1}".format(IDS_REGIONS[bids['maxsell']['region']], bids['maxsell']['value'])
+	bids = check_bids(item_name, min_qty=min_qty, regions=[10000001, 10000036, 10000043, 10000064, 10000037, 10000067, 10000030, 10000042, 10000028, 10000032, 10000068])
+	print "  Highest buy order: {0} with {1}".format(IDS_REGIONS[bids['maxbuy']['region']], locale.currency(bids['maxbuy']['value'], grouping=True, symbol=False))
+	print "  Lowest buy order: {0} with {1}".format(IDS_REGIONS[bids['minbuy']['region']], locale.currency(bids['minbuy']['value'], grouping=True, symbol=False))
+	print "  Lowest sell order: {0} with {1}".format(IDS_REGIONS[bids['minsell']['region']], locale.currency(bids['minsell']['value'], grouping=True, symbol=False))
+	print "  Highest sell order: {0} with {1}".format(IDS_REGIONS[bids['maxsell']['region']], locale.currency(bids['maxsell']['value'], grouping=True, symbol=False))
